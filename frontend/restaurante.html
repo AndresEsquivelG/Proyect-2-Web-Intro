@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Restaurant Detail</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <!-- NAV -->
+  <nav class="bg-white shadow p-4 flex justify-between items-center">
+    <h1 class="text-2xl font-bold cursor-pointer" onclick="location.href='index.html'">ExpressFood</h1>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="p-6 max-w-6xl mx-auto space-y-6">
+    <!-- Info del restaurante -->
+    <section class="bg-white shadow rounded p-4 flex items-start gap-6">
+      <img id="restImg" src="assets/default-thumbnail.jpg" class="w-40 h-40 object-cover rounded" />
+      <div class="flex-1">
+        <h2 id="restName" class="text-2xl font-bold">Nombre Restaurante</h2>
+        <p id="restType" class="text-gray-600">Tipo</p>
+        <p id="restCreated" class="text-sm text-gray-500">Creado el: -</p>
+        <p id="restOrders" class="text-sm text-gray-500">Pedidos realizados: -</p>
+        <button id="favBtn" class="mt-2 bg-yellow-400 text-white px-4 py-1 rounded">★ Add to Favorites</button>
+        <button id="viewOrdersBtn" class="ml-2 bg-blue-500 text-white px-4 py-1 rounded">View Orders</button>
+      </div>
+    </section>
+
+    <!-- Lista de comidas -->
+    <section>
+      <h3 class="text-xl font-semibold mb-4">Available Meals</h3>
+      <div id="mealList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+    </section>
+
+    <!-- Carrito -->
+    <section>
+      <h3 class="text-xl font-semibold mb-4">Shopping Cart</h3>
+      <div id="cart" class="bg-white p-4 rounded shadow space-y-4">
+        <div id="cartItems" class="space-y-2"></div>
+        <hr />
+        <div class="space-y-1 text-sm text-gray-700">
+          <p>Subtotal: ₡<span id="subtotal">0</span></p>
+          <p>IVA (13%): ₡<span id="tax">0</span></p>
+          <p>Delivery (10%): ₡<span id="delivery">0</span></p>
+          <p>Service (10%): ₡<span id="service">0</span></p>
+          <p class="font-bold">Total: ₡<span id="total">0</span></p>
+        </div>
+        <button id="placeOrderBtn" class="bg-green-600 text-white px-6 py-2 rounded w-full mt-4">Place Order</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal de pedidos -->
+  <div id="ordersModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-lg w-11/12 max-w-2xl p-6 relative">
+      <button onclick="closeOrdersModal()" class="absolute top-2 right-2 text-xl">&times;</button>
+      <h4 class="text-xl font-semibold mb-4">Previous Orders</h4>
+      <div id="ordersList" class="space-y-4">
+        <!-- Aquí se insertan los pedidos -->
+      </div>
+    </div>
+  </div>
+</body>
+<script defer src="js/restaurante.js"></script>
+</html>
