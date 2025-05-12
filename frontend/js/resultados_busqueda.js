@@ -12,7 +12,6 @@ document.getElementById("searchBtn").onclick = () => {
   window.location.href = `resultados_busqueda.html?q=${encodeURIComponent(newQuery)}`;
 };
 
-// También permitir búsqueda con Enter en el input
 document.getElementById("searchInput").addEventListener("keypress", (e) => {
   if (e.key === "Enter") {
     document.getElementById("searchBtn").click();
@@ -22,25 +21,72 @@ document.getElementById("searchInput").addEventListener("keypress", (e) => {
 const resultsContainer = document.getElementById("resultsList");
 const noResults = document.getElementById("noResults");
 
-//verificar si un restaurante está en favoritos
-async function checkIfFavorite(restaurantId) {
-  try {
-    const response = await fetch(`${API_URL}/favorites/`);
-    if (!response.ok) return false;
-    
-    const favorites = await response.json();
-    return favorites.some(fav => fav.restaurant_id === restaurantId);
-  } catch (error) {
-    console.error("Error al verificar favoritos:", error);
-    return false;
-  }
-}
-
-//formatear fecha
 function formatDate(dateString) {
   const date = new Date(dateString);
   return date.toLocaleDateString();
 }
+
+//agregar/eliminar de favoritos
+async function handleFavoriteToggle(event) {
+  event.stopPropagation();
+
+  const starElement = event.target;
+  const restaurantId = starElement.dataset.restaurantId;
+  if (!restaurantId) {
+    console.error("No se encontró el ID del restaurante en la estrella.");
+    return;
+  }
+
+  const isCurrentlyFavorite = starElement.classList.contains("text-yellow-500");
+  const url = `${API_URL}/favorites/${restaurantId}`;
+  const method = isCurrentlyFavorite ? 'DELETE' : 'POST';
+
+  try {
+    const response = await fetch(url, {
+      method: method,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (response.ok) {
+      if (isCurrentlyFavorite) {
+        starElement.classList.remove("text-yellow-500");
+        starElement.classList.add("text-gray-300");
+        starElement.textContent = "☆";
+        console.log(`Restaurante ${restaurantId} eliminado de favoritos.`);
+
+      } else {
+        starElement.classList.remove("text-gray-300");
+        starElement.classList.add("text-yellow-500");
+        starElement.textContent = "★";
+        console.log(`Restaurante ${restaurantId} agregado a favoritos.`);
+
+      }
+
+    } else if (response.status === 404 && isCurrentlyFavorite) {
+        console.warn(`Intentó eliminar favorito ${restaurantId}, pero no se encontró en la BD.`);
+         starElement.classList.remove("text-yellow-500");
+         starElement.classList.add("text-gray-300");
+         starElement.textContent = "☆";
+
+    } else if (response.status === 409 && !isCurrentlyFavorite) {
+         console.warn(`Intentó agregar favorito ${restaurantId}, pero ya estaba en la BD.`);
+         starElement.classList.remove("text-gray-300");
+         starElement.classList.add("text-yellow-500");
+         starElement.textContent = "★";
+    }
+
+     else {
+      throw new Error(`Error en la operación de favoritos: ${response.statusText}`);
+    }
+
+  } catch (error) {
+    console.error("Error al actualizar favoritos:", error);
+    alert("Ocurrió un error al actualizar favoritos. Intenta nuevamente.");
+  }
+}
+
 
 //buscar restaurantes
 async function searchRestaurants() {
@@ -52,37 +98,40 @@ async function searchRestaurants() {
           </div>
             <p class="mt-2">Buscando restaurantes...</p>
           </div>`;
-    
+
     const response = await fetch(`${API_URL}/restaurants/search/?query=${encodeURIComponent(query)}`);
-    
+
     if (!response.ok) {
       throw new Error(`Error al buscar restaurantes: ${response.statusText}`);
     }
-    
+
     const restaurants = await response.json();
     resultsContainer.innerHTML = '';
-    
+
     if (restaurants.length === 0) {
       noResults.classList.remove("hidden");
     } else {
       noResults.classList.add("hidden");
-      
-      //favoritos: compararlos
-      const favorites = await fetch(`${API_URL}/favorites/`).then(r => r.json()).catch(() => []);
+
+      const favorites = await fetch(`${API_URL}/favorites/`)
+        .then(r => r.json())
+        .catch((e) => {
+            console.error("Error al obtener favoritos para marcar resultados:", e);
+            return []; 
+        });
       const favoriteIds = favorites.map(f => f.restaurant_id);
-      
+
       for (const restaurant of restaurants) {
         const isFavorite = favoriteIds.includes(restaurant.id);
-        
+
         const div = document.createElement("div");
         div.className = "bg-white rounded shadow p-4 flex items-center gap-4 hover:shadow-lg cursor-pointer transition-all";
         div.onclick = () => window.location.href = `./restaurante.html?id=${restaurant.id}`;
-        
-        // Usa la imagen del restaurante o una imagen por defecto
-        const imgSrc = restaurant.thumbnail 
-          ? `${API_URL}${restaurant.thumbnail}` 
+
+        const imgSrc = restaurant.thumbnail
+          ? `${API_URL}${restaurant.thumbnail}`
           : "../assets/default-thumbnail.jpg";
-          
+
         div.innerHTML = `
           <img src="${imgSrc}" class="w-24 h-24 object-cover rounded" alt="${restaurant.name}" onerror="this.src='../assets/default-thumbnail.jpg'" />
           <div class="flex-1">
@@ -96,10 +145,17 @@ async function searchRestaurants() {
             </div>
             <p class="text-sm text-gray-500 mt-1">Platillos: ${restaurant.foods?.length || 0}</p>
           </div>
-          ${isFavorite ? '<span class="text-yellow-500 font-bold text-xl">★</span>' : '<span class="text-gray-300 font-bold text-xl">☆</span>'}
+          <span class="font-bold text-xl cursor-pointer favorite-toggle-star ${isFavorite ? 'text-yellow-500' : 'text-gray-300'}" data-restaurant-id="${restaurant.id}">
+            ${isFavorite ? '★' : '☆'}
+          </span>
         `;
-        
+
         resultsContainer.appendChild(div);
+
+        const starElement = div.querySelector('.favorite-toggle-star');
+        if (starElement) {
+            starElement.addEventListener('click', handleFavoriteToggle);
+        }
       }
     }
   } catch (error) {
@@ -111,5 +167,10 @@ async function searchRestaurants() {
     `;
   }
 }
+
+
+
+
+
 
 document.addEventListener("DOMContentLoaded", searchRestaurants);
