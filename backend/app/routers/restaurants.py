@@ -79,7 +79,10 @@ async def create_restaurant(
         name=name,
         type=type,
         thumbnail=restaurant_thumbnail,
-        foods=[]
+        foods=[
+            schemas.FoodCreate(name=meal["name"], price=meal["price"])
+            for meal in meals
+        ]
     )
     return crud.create_restaurant(db, restaurant_data)
 
