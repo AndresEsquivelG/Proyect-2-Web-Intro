@@ -104,19 +104,36 @@ function displayFoodItems(foods) {
         mealList.innerHTML = '<p class="text-gray-600">No hay comidas disponibles en este restaurante.</p>';
         return;
     }
-    foods.forEach(food => {
-        const foodElement = `
-            <div class="bg-gray-100 rounded-lg p-4 flex items-center gap-4">
-                <img src="${food.thumbnail ? `${API_BASE_URL}${food.thumbnail}` : '../assets/default-thumbnail.jpg'}" class="w-20 h-20 object-cover rounded" alt="${food.name}" />
-                <div class="flex-1">
-                    <h4 class="text-lg font-semibold">${food.name}</h4>
-                    <p class="text-gray-700">₡${food.price.toFixed(2)}</p>
-                </div>
-                <button class="bg-blue-500 text-white px-3 py-1 rounded add-to-cart-btn" data-food-id="${food.id}" data-food-name="${food.name}" data-food-price="${food.price}" data-food-thumbnail="${food.thumbnail || '../assets/default-thumbnail.jpg'}">Agregar</button>
+foods.forEach(food => {
+    const foodElement = `
+        <div class="bg-gray-100 rounded-lg p-4 flex items-center gap-4"
+             draggable="true"
+             ondragstart='handleDragStart(event)'
+             data-food-id="${food.id}"
+             data-food-name="${food.name}"
+             data-food-price="${food.price}"
+             data-food-thumbnail="${food.thumbnail || '../assets/default-thumbnail.jpg'}">
+             
+            <img src="${food.thumbnail ? `${API_BASE_URL}${food.thumbnail}` : '../assets/default-thumbnail.jpg'}"
+                 class="w-20 h-20 object-cover rounded" alt="${food.name}" />
+            
+            <div class="flex-1">
+                <h4 class="text-lg font-semibold">${food.name}</h4>
+                <p class="text-gray-700">₡${food.price.toFixed(2)}</p>
             </div>
-        `;
-        mealList.innerHTML += foodElement;
-    });
+
+            <button class="bg-blue-500 text-white px-3 py-1 rounded add-to-cart-btn"
+                    data-food-id="${food.id}"
+                    data-food-name="${food.name}"
+                    data-food-price="${food.price}"
+                    data-food-thumbnail="${food.thumbnail || '../assets/default-thumbnail.jpg'}">
+                Agregar
+            </button>
+        </div>
+    `;
+    mealList.innerHTML += foodElement;
+});
+
     document.querySelectorAll('.add-to-cart-btn').forEach(button => {
         button.addEventListener('click', handleAddToCart);
     });
@@ -242,7 +259,7 @@ function renderCart() {
 // realizar pedido
 async function handlePlaceOrder() {
     if (cart.length === 0) {
-        alert('Tu carrito está vacío!');
+        showOrderStatus('Tu carrito está vacío.', 'error');
         return;
     }
 
@@ -270,6 +287,7 @@ async function handlePlaceOrder() {
     };
 
     try {
+        showOrderStatus("Procesando pedido...", "loading");
         const response = await fetch(`${API_BASE_URL}/orders/${restaurantId}`, {
             method: 'POST',
             headers: {
@@ -289,11 +307,11 @@ async function handlePlaceOrder() {
         saveCart();
         renderCart();
 
-        fetchRestaurantDetails();
+        showOrderSuccessWithRedirect("Pedido realizado correctamente.");
 
     } catch (error) {
         console.error('Error al realizar el pedido:', error);
-        alert('Fallo al realizar el pedido. Intenta nuevamente.');
+        showOrderStatus("Fallo al realizar el pedido. Intenta nuevamente.", "error");
     }
 }
 
@@ -398,5 +416,65 @@ favBtn.addEventListener('click', handleFavoriteToggle);
 viewOrdersBtn.addEventListener('click', handleViewOrders);
 placeOrderBtn.addEventListener('click', handlePlaceOrder);
 
+const orderStatusMessage = document.getElementById("orderStatusMessage");
+
+function showOrderStatus(message, type = "info") {
+    const base = "p-4 rounded text-center mb-4 ";
+    let classes = "";
+
+    if (type === "loading") {
+        classes = base + "bg-blue-100 text-blue-800 animate-pulse";
+    } else if (type === "success") {
+        classes = base + "bg-green-100 text-green-800";
+    } else if (type === "error") {
+        classes = base + "bg-red-100 text-red-800";
+    }
+
+    orderStatusMessage.className = classes;
+    orderStatusMessage.textContent = message;
+    orderStatusMessage.classList.remove("hidden");
+}
+
+function showOrderSuccessWithRedirect(message) {
+    showOrderStatus(message, "success");
+    const button = document.createElement("button");
+    button.textContent = "Aceptar";
+    button.className = "mt-2 bg-green-600 text-white px-4 py-2 rounded";
+    button.onclick = () => location.reload(); // o redirige si prefieres
+    orderStatusMessage.appendChild(document.createElement("br"));
+    orderStatusMessage.appendChild(button);
+}
+
+function hideOrderStatus() {
+    orderStatusMessage.classList.add("hidden");
+    orderStatusMessage.textContent = "";
+}
+
 
 fetchRestaurantDetails();
+
+function handleDragStart(event) {
+    const target = event.currentTarget;
+    const foodData = {
+        food_id: parseInt(target.dataset.foodId),
+        name: target.dataset.foodName,
+        price: parseFloat(target.dataset.foodPrice),
+        thumbnail: target.dataset.foodThumbnail
+    };
+    event.dataTransfer.setData("application/json", JSON.stringify(foodData));
+}
+
+function handleDrop(event) {
+    event.preventDefault();
+    const foodData = JSON.parse(event.dataTransfer.getData("application/json"));
+    const existingItemIndex = cart.findIndex(item => item.food_id === foodData.food_id);
+
+    if (existingItemIndex > -1) {
+        cart[existingItemIndex].quantity += 1;
+    } else {
+        cart.push({ ...foodData, quantity: 1 });
+    }
+
+    renderCart();
+    saveCart();
+}

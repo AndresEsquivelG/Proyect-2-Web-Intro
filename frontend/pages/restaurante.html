@@ -36,7 +36,12 @@
     <!-- Carrito -->
     <section>
       <h3 class="text-xl font-semibold mb-4">Shopping Cart</h3>
-      <div id="cart" class="bg-white p-4 rounded shadow space-y-4">
+        <div id="orderStatusMessage" class="hidden p-4 rounded text-center mb-4"></div>
+
+        <div id="cart"
+            class="bg-white p-4 rounded shadow space-y-4"
+            ondragover="event.preventDefault()"
+            ondrop="handleDrop(event)">
         <div id="cartItems" class="space-y-2"></div>
         <hr />
         <div class="space-y-1 text-sm text-gray-700">
@@ -51,16 +56,19 @@
     </section>
   </main>
 
-  <!-- Modal de pedidos -->
-  <div id="ordersModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white rounded-lg shadow-lg w-11/12 max-w-2xl p-6 relative">
-      <button onclick="closeOrdersModal()" class="absolute top-2 right-2 text-xl">&times;</button>
-      <h4 class="text-xl font-semibold mb-4">Previous Orders</h4>
-      <div id="ordersList" class="space-y-4">
-        <!-- Aquí se insertan los pedidos -->
-      </div>
+<!-- Modal de pedidos -->
+<div id="ordersModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-lg w-11/12 max-w-2xl p-6 relative max-h-[90vh] overflow-hidden">
+    <button onclick="closeOrdersModal()" class="absolute top-2 right-2 text-xl">&times;</button>
+    <h4 class="text-xl font-semibold mb-4">Previous Orders</h4>
+    
+    <!-- Contenedor con scroll -->
+    <div id="ordersList" class="space-y-4 overflow-y-auto pr-2" style="max-height: 70vh;">
+      <!-- Aquí se insertan los pedidos -->
     </div>
   </div>
+</div>
+
 </body>
 <script defer src="../js/restaurante.js"></script>
 </html>

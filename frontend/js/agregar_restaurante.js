@@ -1,3 +1,4 @@
+    console.log("Hola en agregar_restaurante")
 const container = document.getElementById("mealsContainer");
 const addBtn = document.getElementById("addMealBtn");
 const restaurantForm = document.getElementById("restaurantForm");
@@ -30,74 +31,102 @@ addBtn.onclick = () => {
 // Al menos una comida al cargar
 window.onload = () => addBtn.click();
 
+const statusMessage = document.getElementById("statusMessage");
+
+function showStatus(message, type = "info") {
+  const base = "p-4 rounded text-center mb-4 ";
+  let classes = "";
+
+  if (type === "loading") {
+    classes = base + "bg-blue-100 text-blue-800 animate-pulse";
+  } else if (type === "success") {
+    classes = base + "bg-green-100 text-green-800";
+  } else if (type === "error") {
+    classes = base + "bg-red-100 text-red-800";
+  }
+
+  statusMessage.className = classes;
+  statusMessage.textContent = message;
+  statusMessage.classList.remove("hidden");
+}
+
+function showSuccessWithRedirect(message) {
+  showStatus(message, "success");
+
+  const button = document.createElement("button");
+  button.textContent = "Aceptar";
+  button.className = "mt-2 bg-green-600 text-white px-4 py-2 rounded";
+  button.onclick = () => window.location.href = "../index.html";
+  statusMessage.appendChild(document.createElement("br"));
+  statusMessage.appendChild(button);
+}
+
+function hideStatus() {
+  statusMessage.classList.add("hidden");
+  statusMessage.textContent = "";
+}
+
+
 restaurantForm.onsubmit = async function(event) {
   event.preventDefault();
-  
   try {
-    const restaurantFormData = new FormData();
+    showStatus("Creando restaurante...", "loading");
 
+    // 1) Prepara datos del restaurante (sólo campos y fotos del restaurante)
+    const restaurantFormData = new FormData();
     restaurantFormData.append("name", this.elements.name.value);
     restaurantFormData.append("type", this.elements.type.value);
-    
     const restaurantImage = this.elements.restaurantImage.files[0];
     if (restaurantImage) {
       restaurantFormData.append("restaurant_image", restaurantImage);
     }
-    
-    //datos de las comidas
-    const meals = [];
+
+    // 2) Construye sólo el array de meals SIN imagen
+    const mealsWithoutImages = [];
     const mealItems = document.querySelectorAll('.meal-item');
-    
     mealItems.forEach(item => {
-      const index = item.dataset.index;
-      const nameField = item.querySelector(`input[name="meals[${index}][name]"]`);
-      const priceField = item.querySelector(`input[name="meals[${index}][price]"]`);
-      
-      if (nameField && priceField && nameField.value && priceField.value) {
-        meals.push({
-          name: nameField.value,
+      const idx = item.dataset.index;
+      const nameField  = item.querySelector(`input[name="meals[${idx}][name]"]`);
+      const priceField = item.querySelector(`input[name="meals[${idx}][price]"]`);
+      const imgField   = item.querySelector(`input[name="meals[${idx}][image]"]`);
+      if (nameField.value && priceField.value && (!imgField.files[0])) {
+        mealsWithoutImages.push({
+          name:  nameField.value,
           price: parseFloat(priceField.value)
         });
       }
     });
-    
-    restaurantFormData.append("meals_data", JSON.stringify(meals));
-    
-    const restaurantResponse = await fetch('http://127.0.0.1:8000/restaurants/', {
+    restaurantFormData.append("meals_data", JSON.stringify(mealsWithoutImages));
+
+    // 3) Crea el restaurante y los platillos sin imagen
+    const resp = await fetch('http://127.0.0.1:8000/restaurants/', {
       method: 'POST',
       body: restaurantFormData
     });
-    
-    if (!restaurantResponse.ok) {
-      throw new Error(`Error al crear restaurante: ${restaurantResponse.statusText}`);
-    }
-    
-    const restaurantData = await restaurantResponse.json();
-    
-    for (const item of mealItems) {
-      const index = item.dataset.index;
-      const nameField = item.querySelector(`input[name="meals[${index}][name]"]`);
-      const priceField = item.querySelector(`input[name="meals[${index}][price]"]`);
-      const imageField = item.querySelector(`input[name="meals[${index}][image]"]`);
-      
-      //imagen para subir
-      if (nameField && priceField && imageField && imageField.files[0]) {
-        const foodFormData = new FormData();
-        foodFormData.append("name", nameField.value);
-        foodFormData.append("price", priceField.value);
-        foodFormData.append("food_image", imageField.files[0]);
+    if (!resp.ok) throw new Error(`Error al crear restaurante: ${resp.statusText}`);
+    const restaurantData = await resp.json();
 
+    // 4) Ahora crea **sólo** los platillos **con** imagen
+    for (const item of mealItems) {
+      const idx = item.dataset.index;
+      const nameField  = item.querySelector(`input[name="meals[${idx}][name]"]`);
+      const priceField = item.querySelector(`input[name="meals[${idx}][price]"]`);
+      const imgField   = item.querySelector(`input[name="meals[${idx}][image]"]`);
+      if (imgField.files[0]) {
+        const foodForm = new FormData();
+        foodForm.append("name",  nameField.value);
+        foodForm.append("price", priceField.value);
+        foodForm.append("food_image", imgField.files[0]);
         await fetch(`http://127.0.0.1:8000/restaurants/${restaurantData.id}/foods`, {
           method: 'POST',
-          body: foodFormData
+          body: foodForm
         });
       }
     }
-    
-    window.location.href = "../index.html";
-    
-  } catch (error) {
-    console.error("Error:", error);
-    alert("Error al crear el restaurante: " + error.message);
+
+    showSuccessWithRedirect("Restaurante creado correctamente.");
+  } catch (err) {
+    console.error(err);
+    showStatus("Error al crear el restaurante: " + err.message, "error");
   }
 };
